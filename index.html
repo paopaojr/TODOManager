@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		
+		<title>TODO LIST MANAGEMENT</title>
+		<script src="js/jquery-1.11.3.js"></script>
+		<script src="js/bootstrap.js"></script>
+		<script src="js/react.js"></script>
+		<script src="js/react-dom.js"></script>
+		<script src="js/browser.min.js"></script>
+		
+		<link rel="stylesheet" href="css/bootstrap.css">
+		<link rel="stylesheet" href="css/bootstrap-theme.css">
+		<link rel="stylesheet" href="css/site.css">
+	</head>
+	<body>
+		<div id="content"></div>
+		
+		<!-- USE EMBED. Can't do babel AJAX seperated script for local page -->
+		<script type="text/babel">
+			Date.prototype.getDateWithoutTime = function() {
+				return this.getFullYear() + '/' + (this.getMonth() + 1) + '/' + this.getDate();
+			}
+		
+			// default example tasks data
+			var tasks = [
+				{ id: 1, name : "Task 1", checked : false, add_date: new Date('2015-12-21').getTime() },
+				{ id: 2, name : "Task 2", checked : true, add_date: new Date('2015-12-22').getTime() },
+				{ id: 3, name : "Task 3", checked : false, add_date: new Date('2015-12-22').getTime() },
+				{ id: 4, name : "Task 4", checked : false, add_date: new Date('2015-12-23').getTime() },
+				{ id: 5, name : "Task 5", checked : true, add_date: new Date('2015-12-23').getTime() },
+				{ id: 6, name : "Task 6", checked : false, add_date: new Date('2015-12-23').getTime() },
+				{ id: 7, name : "Task 7", checked : false, add_date: new Date('2015-12-23').getTime() },
+			];
+			
+			var localStorageKey = 'todo';
+		
+			var ToDoListContainer = React.createClass({
+				getInitialState: function() {
+					return {
+						tasks: tasks,
+						filter: 'all',
+					};
+				},
+				componentDidMount: function() {
+					if(localStorage.getItem(localStorageKey)) {
+						this.setState(JSON.parse(localStorage.getItem(localStorageKey)));
+					}
+				},
+				componentDidUpdate: function() {
+					localStorage.setItem(localStorageKey, JSON.stringify(this.state));
+				},
+				addData: function() {
+					//TODO
+					var name = this.refs.add_input.value;
+					if (!name) {
+						alert('Task name must not be empty!');
+						return;
+					}
+					
+					var id;
+					if (this.state.tasks.length === 0) {
+						id = 1;
+					} else {
+						// last item always has the lastest id (except someone try to edit json file)
+						id = this.state.tasks[this.state.tasks.length - 1].id + 1;
+					}
+					
+					var new_task = {
+						id: id,
+						name: name,
+						checked: false,
+						add_date: new Date().getTime(),
+					};
+					this.setState({tasks: this.state.tasks.concat([new_task])});
+				},
+				deleteData: function(id) {
+					this.setState({tasks: this.state.tasks.filter(function (el) {
+							return el.id !== id;
+                       })
+				   });
+				},
+				checkedData: function(id) {
+					var tasks = this.state.tasks
+					for ( var i in tasks) {
+						if(tasks[i].id === id){
+							tasks[i].checked = !tasks[i].checked;
+						}
+					}
+					this.setState({tasks: tasks});
+				},
+				filterData: function(type) {
+					this.setState({filter: type});
+				},
+				clearAll: function() {
+					if (confirm('Sure?')) {
+						this.setState({tasks: []});
+					}
+				},
+				exportList: function() {
+					var fileAsBlob = new Blob([JSON.stringify(this.state)], {type : 'application/json'});
+					var fileNameToSaveAs = 'TODOList.json';
+					var downloadLink = document.createElement("a");
+					downloadLink.download = fileNameToSaveAs;
+					downloadLink.setAttribute('id', 'downloadLink');
+					downloadLink.innerHTML = 'Download File';
+					if (window.webkitURL != null)
+					{
+						// Chrome allows the link to be clicked
+						// without actually adding it to the DOM.
+						downloadLink.href = window.webkitURL.createObjectURL(fileAsBlob);
+					}
+					else
+					{
+						// Firefox requires the link to be added to the DOM
+						// before it can be clicked.
+						downloadLink.href = window.URL.createObjectURL(fileAsBlob);
+						downloadLink.style.display = 'none';
+						document.body.appendChild(downloadLink);
+						downloadLink.onclick = setTimeout(function(){document.getElementById('downloadLink').remove();}, 100);
+					}
+
+					downloadLink.click();
+				},
+				importList: function() {
+					$('#import-file').click();
+				},
+				readFileToList: function(evt) {
+					var file = evt.target.files[0]; 
+					if (file) {
+						var reader = new FileReader();
+						reader.onload = function() {
+							this.setState(JSON.parse(reader.result));
+						}.bind(this);
+						reader.readAsText(file);
+					}
+				},
+				render: function() {
+					//sort by datetime
+					var ordered_tasks = this.state.tasks.slice(0);
+					ordered_tasks.sort(function(a, b) {
+						return (b.add_date > a.add_date) ? 1 : (b.add_date < a.add_date) ? -1 : 0;
+					});
+					
+					var task_dates = [];
+					
+					//group by date
+					for(var i=0; i< ordered_tasks.length; i++) {
+						var date = new Date(ordered_tasks[i].add_date).getDateWithoutTime();
+						if(task_dates.indexOf(date) === -1) {
+							task_dates.push(date);
+						}
+					}
+					
+					var list = [];
+					for(var i=0; i< task_dates.length; i++) {
+						list.push(
+							ordered_tasks.filter(function (el) {
+								var date = new Date(el.add_date).getDateWithoutTime();
+								return date === task_dates[i];
+							})
+						);
+					}
+						
+					return (
+						<div className="container text-center">
+							<h1 className="title">TODO LIST MANAGEMENT</h1>
+							<div className="input-group add-input-container">
+								<input type="text" className="form-control" placeholder="Adding new item..." ref="add_input" />
+								<span className="input-group-btn">
+									<button className="btn btn-primary" type="button" onClick={this.addData}>Add</button>
+								 </span>
+							</div>
+							
+							{list.map(function(t, i){
+								return <ToDoListView key={i} task={t} filter={this.state.filter} check_data={this.checkedData} delete_data={this.deleteData} />
+							}, this)}
+							
+							<div>
+								<div className="col-xs-12 col-sm-1 text-left">
+									<p>Show</p>
+								</div>
+								<div className="text-center col-xs-12 col-sm-6">
+									<div className="btn-group" role="group">
+										<button type="button" className={this.state.filter === 'all' ? 'btn btn-primary active' : 'btn btn-primary'} 
+										onClick={this.filterData.bind(null, 'all')}>All</button>
+										<button type="button" className={this.state.filter === 'active' ? 'btn btn-primary active' : 'btn btn-primary'} 
+										onClick={this.filterData.bind(null, 'active')}>Active</button>
+										<button type="button" className={this.state.filter === 'completed' ? 'btn btn-primary active' : 'btn btn-primary'} 
+										onClick={this.filterData.bind(null, 'completed')}>Completed</button>
+									</div>
+								</div>
+								<input type="file" name="import-file" id="import-file" accept="application/json" onChange={this.readFileToList} />
+								<div className="text-center col-xs-12 col-sm-5">
+									<div className="btn-group">
+										<button className="btn btn-success" type="button" onClick={this.importList}>Import</button>
+										<button className="btn btn-info" type="button" onClick={this.exportList}>Export</button>
+										<button className="btn btn-danger" type="button" onClick={this.clearAll}>Clear All</button>
+									</div>
+								</div>
+							</div>
+						</div>
+					);
+				}
+			});
+			
+			var ToDoListView = React.createClass({
+				render: function() {
+					var date = new Date(this.props.task[0].add_date).getDateWithoutTime();
+					var todo_count = this.props.task.filter(function (el) { return el.checked === false; }).length;
+					return (
+						<div className="taskList-wrapper text-left">
+						<p>{todo_count} Item{todo_count > 1 ? 's' : ''} to do {date}</p>
+							<ul className="taskList">
+
+								{this.props.task.map(function(t){
+									if(this.props.filter === 'all' || 
+									(this.props.filter === 'active' && t.checked === false) || 
+									(this.props.filter === 'completed' && t.checked === true)) {
+										return <ToDoListItem key={t.id} id={t.id} name={t.name} checked={t.checked} 
+										check_data={this.props.check_data} delete_data={this.props.delete_data} />;
+									}
+								}, this)}
+							</ul>
+						</div>
+					);
+				}
+			});
+			
+			var ToDoListItem = React.createClass({
+				activeRow: function(evt) {
+					$('.taskListItem').removeClass('active');
+					var target = $(evt.target);
+
+					// this event come from 2 elements
+					if (target.is('li')) {
+						target.addClass('active');
+					} else if (target.is('input')) {
+						target.parent().addClass('active');
+					}
+				},
+				render: function() {
+					return (
+						<li className="taskListItem" onClick={this.activeRow}>
+							<input type="checkbox" className="taskListCheckbox" checked={this.props.checked} onChange={this.props.check_data.bind(null, this.props.id)}  onClick={this.activeRow} />
+							<span className={this.props.checked ? 'text_checked' : 'text_unchecked'}>{this.props.name}</span>
+							<div className="pull-right">
+								<span className="btn-remove glyphicon glyphicon-remove" onClick={this.props.delete_data.bind(null, this.props.id)}></span>
+							</div>
+						</li>
+					);
+				}
+			});
+			
+			ReactDOM.render(
+				<ToDoListContainer />,
+				document.getElementById('content')
+			);
+		</script>
+	</body>
+</html>

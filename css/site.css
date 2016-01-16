@@ -1,0 +1,58 @@
+body {
+	margin-bottom: 40px;
+}
+
+.title {
+   color: black;
+   -webkit-text-fill-color: white;
+   -webkit-text-stroke-width: 1px;
+   -webkit-text-stroke-color: black;
+}
+
+.add-input-container {
+	margin-bottom: 30px;
+}
+
+.text_checked, 
+.text_unchecked {
+	margin-left: 10px;
+}
+
+.text_checked {
+	text-decoration: line-through;
+}
+
+.taskList {
+	list-style: none;
+	margin-bottom: 50px;
+}
+
+.taskList li {
+	padding: 10px;
+	border-bottom: 1px dotted #bbbbbb;
+}
+
+.taskListItem.active {
+	background: #eeeeee;
+}
+
+.taskListItem .glyphicon-remove:hover {
+	cursor: pointer;
+}
+
+.taskListItem .glyphicon-remove {
+	color: #ff0000;
+	display: none;
+}
+.taskListItem.active .glyphicon-remove {
+	display: inline-block;
+}
+
+.btn-group button {
+	width: 90px;
+	margin-bottom: 15px;
+}
+
+#import-file {
+	display: none;
+}
